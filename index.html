@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>さんすう おおきさくらべ ふりかえり</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;background:#f7fbff;color:#333}
+main{max-width:900px;margin:auto;padding:22px 18px 40px}
+h1{text-align:center;font-size:clamp(26px,6vw,46px);margin:8px 0 22px}
+.card{background:white;border-radius:24px;padding:24px;box-shadow:0 4px 18px #00000012;margin-bottom:18px}
+h2{font-size:clamp(22px,5vw,34px);margin:0 0 18px}
+.buttons{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+button{font:inherit;font-weight:700;border:3px solid #d8e5ee;border-radius:20px;background:#fff;padding:20px 12px;font-size:clamp(20px,4.5vw,30px);min-height:78px;cursor:pointer}
+button:active{transform:scale(.98)}
+button.selected{border-color:#4a90e2;background:#eaf4ff}
+.hidden{display:none}
+.result{font-size:clamp(24px,5vw,38px);line-height:1.8;background:#fffdf0;border-radius:20px;padding:24px;font-weight:700}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.actions button{font-size:20px;min-height:62px}
+.progress{text-align:center;font-size:18px;margin-bottom:10px;color:#687784}
+.note{text-align:center;font-size:18px;color:#667;margin-top:18px}
+@media(max-width:600px){.buttons{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head>
+<body>
+<main>
+<h1>📏 さんすう<br>おおきさくらべ</h1>
+
+<section id="step1" class="card">
+  <div class="progress">① まず えらぼう</div>
+  <h2>なにを ふりかえる？</h2>
+  <div class="buttons">
+    <button data-type="わかった">💡 わかったこと</button>
+    <button data-type="たいせつ">⭐ たいせつなこと</button>
+    <button data-type="できた">😊 できたこと</button>
+    <button data-type="おもった">💭 おもったこと</button>
+  </div>
+</section>
+
+<section id="step2" class="card hidden">
+  <div class="progress">② つぎを えらぼう</div>
+  <h2 id="question"></h2>
+  <div id="choices" class="buttons"></div>
+</section>
+
+<section id="step3" class="card hidden">
+  <div class="progress">③ ふりかえり できあがり！</div>
+  <h2>✏️ ノートに うつそう！</h2>
+  <div id="result" class="result"></div>
+  <div class="actions">
+    <button id="speak">🔊 よんでみる</button>
+    <button id="again">🔄 べつの ぶん</button>
+    <button id="back">↩ えらびなおす</button>
+    <button id="reset">🏠 はじめから</button>
+  </div>
+  <p class="note">この ぶんを みながら、ノートに ていねいに かこう。</p>
+</section>
+</main>
+
+<script>
+const data={
+ わかった:{
+  q:"なにが わかった？",
+  choices:[
+   ["はしをそろえる","ものの ながさを くらべるときは、はしを そろえることが わかりました。"],
+   ["ぴんとのばす","ひもの ながさを くらべるときは、ぴんと のばすことが わかりました。"],
+   ["くらべるところをかさねる","ながさを くらべるときは、くらべる ところを かさねることが わかりました。"],
+   ["ひもでもくらべられる","ひもを つかって、ながさを くらべることが できると わかりました。"]
+  ]},
+  たいせつ:{
+  q:"なにが たいせつ？",
+  choices:[
+   ["はしをそろえる","ながさを くらべるときは、はしを そろえることが たいせつだと わかりました。"],
+   ["ひもをまっすぐにする","ひもを まっすぐにして くらべることが たいせつだと わかりました。"],
+   ["くらべるところをそろえる","くらべる ところを そろえることが たいせつだと わかりました。"]
+  ]},
+  できた:{
+  q:"なにが できた？",
+  choices:[
+   ["ながさをくらべた","ものの ながさを くらべることが できました。"],
+   ["はしをそろえた","はしを そろえて、ながさを くらべることが できました。"],
+   ["ひもをつかった","ひもを つかって、ながさを くらべることが できました。"],
+   ["じぶんでくらべた","じぶんで くふうして、ながさを くらべることが できました。"]
+  ]},
+  おもった:{
+  q:"どう おもった？",
+  choices:[
+   ["かんたん","ながさを くらべるのは、かんたんだと おもいました。"],
+   ["むずかしい","ながさを くらべるのは、むずかしいと おもいました。"],
+   ["おもしろい","いろいろな ものの ながさを くらべるのが、おもしろかったです。"],
+   ["もっとやりたい","もっと いろいろな ものの ながさを くらべてみたいです。"]
+  ]}
+};
+
+let currentType="";
+const step1=document.getElementById("step1");
+const step2=document.getElementById("step2");
+const step3=document.getElementById("step3");
+const question=document.getElementById("question");
+const choices=document.getElementById("choices");
+const result=document.getElementById("result");
+
+document.querySelectorAll("#step1 button").forEach(b=>{
+ b.onclick=()=>{
+  currentType=b.dataset.type;
+  question.textContent=data[currentType].q;
+  choices.innerHTML="";
+  data[currentType].choices.forEach(([label,text])=>{
+   const x=document.createElement("button");
+   x.textContent=label;
+   x.onclick=()=>showResult(text);
+   choices.appendChild(x);
+  });
+  step1.classList.add("hidden");
+  step2.classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"smooth"});
+ };
+});
+
+function showResult(text){
+ result.textContent=text;
+ step2.classList.add("hidden");
+ step3.classList.remove("hidden");
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+document.getElementById("speak").onclick=()=>{
+ const u=new SpeechSynthesisUtterance(result.textContent);
+ u.lang="ja-JP";u.rate=.85;
+ speechSynthesis.cancel();speechSynthesis.speak(u);
+};
+document.getElementById("again").onclick=()=>{step3.classList.add("hidden");step2.classList.remove("hidden")};
+document.getElementById("back").onclick=()=>{step3.classList.add("hidden");step1.classList.remove("hidden")};
+document.getElementById("reset").onclick=()=>{step3.classList.add("hidden");step2.classList.add("hidden");step1.classList.remove("hidden")};
+</script>
+</body>
+</html>
